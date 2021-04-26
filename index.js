@@ -206,7 +206,7 @@ async function getCardByCustomId( id ) {
 	const tickets = await getTickets();
 	for( const { id, subject, description } of tickets ) {
 		const url = `https://${ host }.zendesk.com/agent/tickets/${ id }`;
-		if ( subject === "[PRODUCTION] App Version Created" ) {
+		if ( subject === "[PRODUCTION] App Version Created" || subject.startsWith( "[STAGING]" ) ) {
 			console.log( "ticket to close:", id, subject, url );
 			await closeAppReviewTicket( id );
 		} else if ( subject === "[PRODUCTION] App Version Withdrawn" ) {
