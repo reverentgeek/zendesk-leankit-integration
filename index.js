@@ -204,49 +204,55 @@ async function getCardByCustomId( id ) {
 ( async () => {
 	const { ZENDESK_HOST: host } = process.env;
 	const tickets = await getTickets();
+	console.log( "total tickets to check:", tickets.length );
 	for( const { id, subject, description } of tickets ) {
-		const url = `https://${ host }.zendesk.com/agent/tickets/${ id }`;
-		if ( subject === "[PRODUCTION] App Version Created" || subject.startsWith( "[STAGING]" ) ) {
-			console.log( "ticket to close:", id, subject, url );
-			await closeAppReviewTicket( id );
-		} else if ( subject === "[PRODUCTION] App Version Withdrawn" ) {
-			const review = parseReviewTicket( description );
-			const cards = await getCardByCustomId( formatReviewId( review.appName, review.version ) );
-			if ( cards.length ) {
-				const reviewSubject = review.appName + " " + review.version;
-				console.log( "discarding:", id, reviewSubject );
-				await discardCard( cards[0].id );
-			}
-			console.log( "ticket to close:", id, subject, url );
-			await closeAppReviewTicket( id );
-		} else if ( subject === "[PRODUCTION] App Version Submitted" ) {
-			const review = parseReviewTicket( description );
+		try {
+			const url = `https://${ host }.zendesk.com/agent/tickets/${ id }`;
+			console.log( `checking [${ id }] ${ subject } ${ url }` );
+			if ( subject === "[PRODUCTION] App Version Created" || subject.startsWith( "[STAGING]" ) ) {
+				console.log( "ticket to close:", id, subject, url );
+				await closeAppReviewTicket( id );
+			} else if ( subject === "[PRODUCTION] App Version Withdrawn" ) {
+				const review = parseReviewTicket( description );
+				const cards = await getCardByCustomId( formatReviewId( review.appName, review.version ) );
+				if ( cards.length ) {
+					const reviewSubject = review.appName + " " + review.version;
+					console.log( "discarding:", id, reviewSubject );
+					await discardCard( cards[0].id );
+				}
+				console.log( "ticket to close:", id, subject, url );
+				await closeAppReviewTicket( id );
+			} else if ( subject === "[PRODUCTION] App Version Submitted" ) {
+				const review = parseReviewTicket( description );
 
-			const cards = await getCardByCustomId( formatReviewId( review.appName, review.version ) );
-			if ( !cards.length ) {
-				const reviewSubject = review.appName + " " + review.version;
-				console.log( "review card to create:", id, reviewSubject );
-				await createCard( {
-					subject: reviewSubject,
-					id: formatReviewId( review.appName, review.version  ),
-					url,
-					review: true,
-					description
-				} );
+				const cards = await getCardByCustomId( formatReviewId( review.appName, review.version ) );
+				if ( !cards.length ) {
+					const reviewSubject = review.appName + " " + review.version;
+					console.log( "review card to create:", id, reviewSubject );
+					await createCard( {
+						subject: reviewSubject,
+						id: formatReviewId( review.appName, review.version  ),
+						url,
+						review: true,
+						description
+					} );
+				}
+				console.log( "ticket to close:", id, subject, url );
+				await closeAppReviewTicket( id );
+			} else {
+				const cards = await getCardByCustomId( formatCustomId( id ) );
+				if ( !cards.length ) {
+					console.log( "support card to create:", id, subject );
+					await createCard( {
+						subject,
+						id: formatCustomId( id ),
+						url,
+						description: url
+					} );
+				}
 			}
-			console.log( "ticket to close:", id, subject, url );
-			await closeAppReviewTicket( id );
-		} else {
-			const cards = await getCardByCustomId( formatCustomId( id ) );
-			if ( !cards.length ) {
-				console.log( "support card to create:", id, subject );
-				await createCard( {
-					subject,
-					id: formatCustomId( id ),
-					url,
-					description: url
-				} );
-			}
+		} catch ( err ) {
+			console.error( err );
 		}
 	}
 } )();
