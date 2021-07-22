@@ -4,7 +4,7 @@
 const path = require( "path" );
 require( "dotenv" ).config( { path: path.join( __dirname, "..", ".env" ) } );
 const client = require( "../src/client" );
-const { Command, Option } = require( "commander" );
+const { Command } = require( "commander" );
 const pkg = require( "../package.json" );
 
 const program = new Command();
