@@ -1,5 +1,3 @@
-"use strict";
-
 const axios = require( "axios" );
 
 function formatCustomId( id ) {
@@ -136,7 +134,6 @@ async function discardCard( id ) {
 		return "Error: " + err.message;
 	}
 }
-
 
 async function getTicket( id ) {
 	try {
@@ -290,4 +287,4 @@ async function syncTickets() {
 module.exports = {
 	syncTicket,
 	syncTickets
-}
+};

@@ -245,8 +245,6 @@ for( const { id, subject, description } of tickets ) {
 					description: url
 				} );
 			}
-		} catch ( err ) {
-			console.error( err );
 		}
 	} catch ( err ) {
 		console.error( err );
