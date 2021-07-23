@@ -285,6 +285,7 @@ async function syncTickets() {
 }
 
 module.exports = {
+	getTickets,
 	syncTicket,
 	syncTickets
 };

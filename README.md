@@ -10,6 +10,18 @@ Integration to sync Zendesk to LeanKit board
 
 ## Usage
 
+```sh
+Usage: zdsync [options]
+
+Synchronize the latest Zendesk tickets to LeanKit
+
+Options:
+  -V, --version          output the version number
+  -t, --ticket <ticket>  manually sync one ticket
+  -q, --query-only       list the tickets
+  -h, --help             display help for command
+```
+
 Sync all recent tickets:
 
 ```sh

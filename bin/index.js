@@ -15,8 +15,22 @@ program
 
 program
 	.option( "-t, --ticket <ticket>", "manually sync one ticket" )
-	.description( "Synchronize latest Zendesk tickets" )
-	.action( async ( { ticket } ) => {
+	.option( "-q, --query-only", "list ticket returned by search" )
+	.description( "Synchronize the latest Zendesk tickets to LeanKit" )
+	.action( async ( { ticket, queryOnly } ) => {
+		if ( queryOnly ) {
+			const data = await client.getTickets();
+			const tickets = data.map( t => {
+				return {
+					id: t.id,
+					update: t.updated_at,
+					subject: t.subject,
+					status: t.status
+				};
+			} );
+			console.log( tickets );
+			return;
+		}
 		if ( ticket === undefined ) {
 			await client.syncTickets();
 		} else {
