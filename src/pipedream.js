@@ -95,7 +95,45 @@ async function createCard( { subject, id, url, review = false, description = "" 
 
 	} catch ( err ) {
 		console.log( err );
-		return "Error: " + err.message;
+		return "Error creating card: " + err.message;
+	}
+}
+
+async function moveCardToLane( cardId, laneId, index = 0 ) {
+	try {
+		const {
+			LK_HOST: host,
+			LK_USERNAME: username,
+			LK_PASSWORD: password
+		} = process.env;
+
+		const data = {
+			cardIds: [ cardId ],
+			destination: {
+				laneId,
+				index
+			}
+		};
+
+		const config = {
+			method: "post",
+			url: `https://${ host }.leankit.com/io/card/move`,
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json"
+			},
+			auth: {
+				username, password
+			},
+			data
+		};
+
+		const res = await axios( config );
+		return res.data;
+
+	} catch ( err ) {
+		console.log( err );
+		return "Error moving card: " + err.message;
 	}
 }
 
@@ -197,56 +235,66 @@ async function getCardByCustomId( id ) {
 	}
 }
 
-const { ZENDESK_HOST: host } = process.env;
-const tickets = await getTickets();
-console.log( "total tickets to check:", tickets.length );
-for( const { id, subject, description } of tickets ) {
-	try {
-		const url = `https://${ host }.zendesk.com/agent/tickets/${ id }`;
-		console.log( `checking [${ id }] ${ subject } ${ url }` );
-		if ( subject === "[PRODUCTION] App Version Created" || subject.startsWith( "[STAGING]" ) ) {
-			console.log( "ticket to close:", id, subject, url );
-			await closeAppReviewTicket( id );
-		} else if ( subject === "[PRODUCTION] App Version Withdrawn" ) {
-			const review = parseReviewTicket( description );
-			const cards = await getCardByCustomId( formatReviewId( review.appName, review.version ) );
-			if ( cards.length ) {
-				const reviewSubject = review.appName + " " + review.version;
-				console.log( "discarding:", id, reviewSubject );
-				await discardCard( cards[0].id );
-			}
-			console.log( "ticket to close:", id, subject, url );
-			await closeAppReviewTicket( id );
-		} else if ( subject === "[PRODUCTION] App Version Submitted" ) {
-			const review = parseReviewTicket( description );
+async function saveTicketToLeanKit( host, id, subject, description ) {
+	const { LK_DOING_LANE_IDS: activeLaneIds, LK_LANE_ID: laneId } = process.env;
+	const url = `https://${ host }.zendesk.com/agent/tickets/${ id }`;
+	if ( subject === "[PRODUCTION] App Version Created" || subject.startsWith( "[STAGING]" ) ) {
+		console.log( "ticket to close:", id, subject, url );
+		await closeAppReviewTicket( id );
+	} else if ( subject === "[PRODUCTION] App Version Withdrawn" ) {
+		const review = parseReviewTicket( description );
+		const cards = await getCardByCustomId( formatReviewId( review.appName, review.version ) );
+		if ( cards.length ) {
+			const reviewSubject = review.appName + " " + review.version;
+			console.log( "discarding:", id, reviewSubject );
+			await discardCard( cards[0].id );
+		}
+		console.log( "ticket to close:", id, subject, url );
+		await closeAppReviewTicket( id );
+	} else if ( subject === "[PRODUCTION] App Version Submitted" ) {
+		const review = parseReviewTicket( description );
 
-			const cards = await getCardByCustomId( formatReviewId( review.appName, review.version ) );
-			if ( !cards.length ) {
-				const reviewSubject = review.appName + " " + review.version;
-				console.log( "review card to create:", id, reviewSubject );
-				await createCard( {
-					subject: reviewSubject,
-					id: formatReviewId( review.appName, review.version  ),
-					url,
-					review: true,
-					description
-				} );
-			}
-			console.log( "ticket to close:", id, subject, url );
-			await closeAppReviewTicket( id );
+		const cards = await getCardByCustomId( formatReviewId( review.appName, review.version ) );
+		if ( !cards.length ) {
+			const reviewSubject = review.appName + " " + review.version;
+			console.log( "review card to create:", id, reviewSubject );
+			await createCard( {
+				subject: reviewSubject,
+				id: formatReviewId( review.appName, review.version  ),
+				url,
+				review: true,
+				description
+			} );
+		}
+		console.log( "ticket to close:", id, subject, url );
+		await closeAppReviewTicket( id );
+	} else {
+		const cards = await getCardByCustomId( formatCustomId( id ) );
+		if ( !cards.length ) {
+			console.log( "support card to create:", id, subject );
+			await createCard( {
+				subject,
+				id: formatCustomId( id ),
+				url,
+				description: url
+			} );
 		} else {
-			const cards = await getCardByCustomId( formatCustomId( id ) );
-			if ( !cards.length ) {
-				console.log( "support card to create:", id, subject );
-				await createCard( {
-					subject,
-					id: formatCustomId( id ),
-					url,
-					description: url
-				} );
+			for ( const card of cards ) {
+				if ( activeLaneIds.indexOf( card.lane.id ) === -1 ) {
+					console.log( "moving card card:", card.id, card.title );
+					await moveCardToLane( card.id, laneId, 0 );
+				}
 			}
 		}
-	} catch ( err ) {
-		console.error( err );
 	}
 }
+
+async function syncTickets() {
+	const { ZENDESK_HOST: host } = process.env;
+	const tickets = await getTickets();
+	for( const { id, subject, description } of tickets ) {
+		await saveTicketToLeanKit( host, id, subject, description );
+	}
+}
+
+await syncTickets();
