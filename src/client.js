@@ -95,7 +95,45 @@ async function createCard( { subject, id, url, review = false, description = "" 
 
 	} catch ( err ) {
 		console.log( err );
-		return "Error: " + err.message;
+		return "Error creating card: " + err.message;
+	}
+}
+
+async function moveCardToLane( cardId, laneId, index = 0 ) {
+	try {
+		const {
+			LK_HOST: host,
+			LK_USERNAME: username,
+			LK_PASSWORD: password
+		} = process.env;
+
+		const data = {
+			cardIds: [ cardId ],
+			destination: {
+				laneId,
+				index
+			}
+		};
+
+		const config = {
+			method: "post",
+			url: `https://${ host }.leankit.com/io/card/move`,
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json"
+			},
+			auth: {
+				username, password
+			},
+			data
+		};
+
+		const res = await axios( config );
+		return res.data;
+
+	} catch ( err ) {
+		console.log( err );
+		return "Error moving card: " + err.message;
 	}
 }
 
@@ -225,6 +263,7 @@ async function getCardByCustomId( id ) {
 }
 
 async function saveTicketToLeanKit( host, id, subject, description ) {
+	const { LK_DOING_LANE_IDS: activeLaneIds, LK_LANE_ID: laneId } = process.env;
 	const url = `https://${ host }.zendesk.com/agent/tickets/${ id }`;
 	if ( subject === "[PRODUCTION] App Version Created" || subject.startsWith( "[STAGING]" ) ) {
 		console.log( "ticket to close:", id, subject, url );
@@ -266,6 +305,13 @@ async function saveTicketToLeanKit( host, id, subject, description ) {
 				url,
 				description: url
 			} );
+		} else {
+			for ( const card of cards ) {
+				if ( activeLaneIds.indexOf( card.lane.id ) === -1 ) {
+					console.log( "moving card card:", card.id, card.title );
+					await moveCardToLane( card.id, laneId, 0 );
+				}
+			}
 		}
 	}
 }
