@@ -6,7 +6,6 @@ require( "dotenv" ).config( { path: path.join( __dirname, "..", ".env" ) } );
 const client = require( "../src/client" );
 const { Command } = require( "commander" );
 const pkg = require( "../package.json" );
-
 const program = new Command();
 
 program
@@ -19,13 +18,17 @@ program
 	.description( "Synchronize the latest Zendesk tickets to LeanKit" )
 	.action( async ( { ticket, queryOnly } ) => {
 		if ( queryOnly ) {
+			const { ZENDESK_HOST: host } = process.env;
 			const data = await client.getTickets();
+			// console.log( data );
 			const tickets = data.map( t => {
 				return {
 					id: t.id,
 					update: t.updated_at,
 					subject: t.subject,
-					status: t.status
+					status: t.status,
+					group_id: t.group_id,
+					url: `https://${ host }.zendesk.com/agent/tickets/${ t.id }`
 				};
 			} );
 			console.log( tickets );

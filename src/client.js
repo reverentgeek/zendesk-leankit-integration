@@ -207,14 +207,15 @@ async function getTickets() {
 			ZENDESK_EMAIL: username,
 			ZENDESK_HOST: host,
 			ZENDESK_DAYS_TO_CHECK: days,
-			ZENDESK_STATUS_THRESHOLD: searchStatus } = process.env;
+			ZENDESK_STATUS_THRESHOLD: searchStatus,
+			ZENDESK_GROUP_ID: groupId } = process.env;
 
 		const buff = Buffer.from( `${ username }/token:${ token }` );
 		const encoded = buff.toString( "base64" );
 		const dt = new Date();
 		dt.setDate( dt.getDate() - days );
 		const dtFilter = dt.toISOString().substring( 0, 10 );
-		const search =`status<${ searchStatus } group:integrations created>${ dtFilter }`;
+		const search =`status<${ searchStatus } group:${ groupId } created>${ dtFilter }`;
 
 		const config = {
 			method: "get",
