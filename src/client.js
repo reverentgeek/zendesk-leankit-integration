@@ -23,9 +23,7 @@ async function closeAppReviewTicket( id ) {
 		const {
 			ZENDESK_API_TOKEN: token,
 			ZENDESK_EMAIL: username,
-			ZENDESK_HOST: host,
-			ZENDESK_CUSTOM_FIELD_ID: customFieldId,
-			ZENDESK_CUSTOM_FIELD_VALUE: customFieldValue } = process.env;
+			ZENDESK_HOST: host } = process.env;
 
 		const buff = Buffer.from( `${ username }/token:${ token }` );
 		const encoded = buff.toString( "base64" );
@@ -40,8 +38,7 @@ async function closeAppReviewTicket( id ) {
 			},
 			data: 		{
 				ticket: {
-					status: "solved",
-					custom_fields: [ { id: customFieldId, value: customFieldValue } ]
+					status: "solved"
 				}
 			}
 		};
@@ -263,7 +260,7 @@ async function getCardByCustomId( id ) {
 	}
 }
 
-async function saveTicketToLeanKit( host, id, subject, description ) {
+async function saveTicketToLeanKit( host, id, subject, description, status ) {
 	const { LK_DOING_LANE_IDS: activeLaneIds, LK_LANE_ID: laneId } = process.env;
 	const url = `https://${ host }.zendesk.com/agent/tickets/${ id }`;
 	if ( subject === "[PRODUCTION] App Version Created" || subject.startsWith( "[STAGING]" ) ) {
@@ -306,7 +303,7 @@ async function saveTicketToLeanKit( host, id, subject, description ) {
 				url,
 				description: url
 			} );
-		} else {
+		} else if ( status === "new" || status === "open" ) {
 			for ( const card of cards ) {
 				if ( activeLaneIds.indexOf( card.lane.id ) === -1 ) {
 					console.log( "moving card card:", card.id, card.title );
@@ -319,15 +316,15 @@ async function saveTicketToLeanKit( host, id, subject, description ) {
 
 async function syncTicket( id ) {
 	const { ZENDESK_HOST: host } = process.env;
-	const { subject, description } = await getTicket( id );
-	await saveTicketToLeanKit( host, id, subject, description );
+	const { subject, description, status } = await getTicket( id );
+	await saveTicketToLeanKit( host, id, subject, description, status );
 }
 
 async function syncTickets() {
 	const { ZENDESK_HOST: host } = process.env;
 	const tickets = await getTickets();
-	for( const { id, subject, description } of tickets ) {
-		await saveTicketToLeanKit( host, id, subject, description );
+	for( const { id, subject, description, status } of tickets ) {
+		await saveTicketToLeanKit( host, id, subject, description, status );
 	}
 }
 
