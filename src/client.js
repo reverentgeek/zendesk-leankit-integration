@@ -213,10 +213,11 @@ async function getTickets() {
 		dt.setDate( dt.getDate() - days );
 		const dtFilter = dt.toISOString().substring( 0, 10 );
 		const search =`status<${ searchStatus } group:${ groupId } created>${ dtFilter }`;
-
+		const url = `https://${ host }.zendesk.com/api/v2/search.json?query=${ search }`;
+		console.log( url );
 		const config = {
 			method: "get",
-			url: `https://${ host }.zendesk.com/api/v2/search.json?query=${ search }`,
+			url,
 			headers: {
 				Accept: "application/json",
 				"Content-Type": "application/json",
