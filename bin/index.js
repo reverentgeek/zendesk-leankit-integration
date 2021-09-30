@@ -15,8 +15,22 @@ program
 program
 	.option( "-t, --ticket <ticket>", "manually sync one ticket" )
 	.option( "-q, --query-only", "list ticket returned by search" )
+	.option( "-g, --groups", "list groups" )
 	.description( "Synchronize the latest Zendesk tickets to LeanKit" )
-	.action( async ( { ticket, queryOnly } ) => {
+	.action( async ( { ticket, queryOnly, groups } ) => {
+		if ( groups ) {
+			const data = await client.getGroups();
+			const grps = data.map( g => {
+				return {
+					id: g.id,
+					name: g.name,
+					description: g.description
+				};
+			} );
+			console.log( grps );
+
+			return;
+		}
 		if ( queryOnly ) {
 			const { ZENDESK_HOST: host } = process.env;
 			const data = await client.getTickets();

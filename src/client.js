@@ -212,7 +212,7 @@ async function getTickets() {
 		const dt = new Date();
 		dt.setDate( dt.getDate() - days );
 		const dtFilter = dt.toISOString().substring( 0, 10 );
-		const search =`status<${ searchStatus } group:${ groupId } created>${ dtFilter }`;
+		const search =`status<${ searchStatus } group:${ groupId } updated>${ dtFilter }`;
 		const url = `https://${ host }.zendesk.com/api/v2/search.json?query=${ search }`;
 		console.log( url );
 		const config = {
@@ -226,6 +226,34 @@ async function getTickets() {
 		};
 		const res = await axios( config );
 		return res.data.results;
+	} catch ( err ) {
+		console.log( err );
+		return [];
+	}
+}
+
+async function getGroups() {
+	try {
+		const {
+			ZENDESK_API_TOKEN: token,
+			ZENDESK_EMAIL: username,
+			ZENDESK_HOST: host } = process.env;
+
+		const buff = Buffer.from( `${ username }/token:${ token }` );
+		const encoded = buff.toString( "base64" );
+		const url = `https://${ host }.zendesk.com/api/v2/groups.json`;
+		console.log( url );
+		const config = {
+			method: "get",
+			url,
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+				Authorization: `Basic ${ encoded }`
+			}
+		};
+		const res = await axios( config );
+		return res.data.groups;
 	} catch ( err ) {
 		console.log( err );
 		return [];
@@ -330,6 +358,7 @@ async function syncTickets() {
 }
 
 module.exports = {
+	getGroups,
 	getTickets,
 	syncTicket,
 	syncTickets
