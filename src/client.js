@@ -79,6 +79,7 @@ async function createCard( { subject, id, url, review = false, description = "" 
 				description,
 				typeId: review ? reviewTypeId : typeId,
 				laneId: review ? reviewLaneId : laneId,
+				index: 0,
 				customId: id,
 				externalLink: {
 					label: "Zendesk Ticket",
